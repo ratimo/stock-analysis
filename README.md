@@ -9,6 +9,7 @@ The project produces one unified dataset from the Nasdaq Helsinki ticker univers
 - `src/stock_analysis/metrics.py` — fiscal-year selection and metric calculations.
 - `src/stock_analysis/pipeline.py` — concurrent download, row-level error handling, sorting, and final export.
 - `fin_stock_analysis.ipynb` — recommended notebook.
+- `architecture.html` — self-contained architecture diagram of the data pipeline.
 - `tests/` — dependency-light tests for core transformations.
 
 ## Run locally

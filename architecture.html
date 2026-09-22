@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Stock Analysis Architecture</title>
+  <style>
+    :root { color-scheme: dark; --bg:#020617; --panel:#0f172a; --text:#e2e8f0; --muted:#94a3b8; --cyan:#22d3ee; --green:#34d399; --violet:#a78bfa; --amber:#fbbf24; --rose:#fb7185; --orange:#fb923c; }
+    * { box-sizing:border-box; }
+    body { margin:0; padding:32px; background:var(--bg); color:var(--text); font:14px/1.5 ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace; background-image:linear-gradient(rgba(30,41,59,.25) 1px,transparent 1px),linear-gradient(90deg,rgba(30,41,59,.25) 1px,transparent 1px); background-size:40px 40px; }
+    .wrap { max-width:1400px; margin:auto; }
+    header { display:flex; align-items:center; gap:12px; margin-bottom:22px; }
+    .pulse { width:10px; height:10px; border-radius:50%; background:var(--cyan); box-shadow:0 0 18px var(--cyan); }
+    h1 { margin:0; font-size:22px; letter-spacing:.04em; }
+    .subtitle { color:var(--muted); font-size:12px; margin:4px 0 0 22px; }
+    .diagram { overflow:auto; border:1px solid #1e293b; border-radius:12px; background:rgba(15,23,42,.78); box-shadow:0 18px 60px rgba(0,0,0,.3); }
+    svg { display:block; min-width:1100px; width:100%; height:auto; }
+    .cards { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-top:18px; }
+    .card { border:1px solid #1e293b; border-radius:10px; padding:15px 17px; background:rgba(15,23,42,.86); }
+    .card h2 { margin:0 0 9px; font-size:13px; }
+    .card p { margin:5px 0; color:var(--muted); font-size:11px; }
+    .dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:7px; }
+    .cyan { background:var(--cyan); }.green { background:var(--green); }.violet { background:var(--violet); }.amber { background:var(--amber); }.rose { background:var(--rose); }
+    footer { color:#64748b; font-size:10px; margin-top:18px; }
+    @media (max-width:800px) { body { padding:16px; } .cards { grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <header>
+      <span class="pulse" aria-hidden="true"></span>
+      <div><h1>STOCK ANALYSIS / SYSTEM ARCHITECTURE</h1><div class="subtitle">Nasdaq Helsinki universe → Yahoo Finance → unified, filterable dataset</div></div>
+    </header>
+
+    <section class="diagram" aria-label="Stock analysis architecture diagram">
+      <svg viewBox="0 0 1320 720" role="img" aria-labelledby="title desc">
+        <title id="title">Stock analysis project architecture</title>
+        <desc id="desc">A flow from the ticker workbook through the notebook and Python pipeline to Yahoo Finance and the final Excel dataset, with tests and metadata.</desc>
+        <defs>
+          <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0H0V40" fill="none" stroke="#1e293b" stroke-width=".5"/></pattern>
+          <marker id="arrow-cyan" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#22d3ee"/></marker>
+          <marker id="arrow-green" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#34d399"/></marker>
+          <marker id="arrow-violet" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#a78bfa"/></marker>
+          <marker id="arrow-amber" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#fbbf24"/></marker>
+          <style>
+            .label{font:600 14px ui-monospace,SFMono-Regular,Menlo,monospace;fill:#e2e8f0}.small{font:11px ui-monospace,SFMono-Regular,Menlo,monospace;fill:#94a3b8}.tiny{font:10px ui-monospace,SFMono-Regular,Menlo,monospace;fill:#64748b}.boundary{fill:none;stroke-width:1.5;stroke-dasharray:8 5}.box{fill:#0f172a;stroke-width:1.5}.arrow{fill:none;stroke-width:2}.dashed{stroke-dasharray:6 5}
+          </style>
+        </defs>
+        <rect width="1320" height="720" fill="url(#grid)"/>
+
+        <!-- Data and execution flow arrows are drawn behind the component boxes. -->
+        <path class="arrow" stroke="#22d3ee" marker-end="url(#arrow-cyan)" d="M260 180H330"/>
+        <path class="arrow" stroke="#22d3ee" marker-end="url(#arrow-cyan)" d="M520 180H590"/>
+        <path class="arrow" stroke="#22d3ee" marker-end="url(#arrow-cyan)" d="M425 225V365"/>
+        <path class="arrow" stroke="#34d399" marker-end="url(#arrow-green)" d="M550 412H590"/>
+        <path class="arrow" stroke="#fbbf24" marker-end="url(#arrow-amber)" d="M700 365C790 365 800 225 870 180"/>
+        <path class="arrow" stroke="#fbbf24" marker-end="url(#arrow-amber)" d="M780 180H870"/>
+        <path class="arrow" stroke="#34d399" marker-end="url(#arrow-green)" d="M1070 180H1140"/>
+        <path class="arrow" stroke="#a78bfa" marker-end="url(#arrow-violet)" d="M440 395V475"/>
+        <path class="arrow" stroke="#34d399" marker-end="url(#arrow-green)" d="M700 565H850"/>
+        <path class="arrow dashed" stroke="#fb7185" marker-end="url(#arrow-violet)" d="M440 620V655H850V620"/>
+
+        <!-- Boundaries -->
+        <rect class="boundary" x="300" y="70" width="510" height="190" rx="12" stroke="#22d3ee"/>
+        <text class="tiny" x="320" y="94" fill="#22d3ee">APPLICATION / NOTEBOOK LAYER</text>
+        <rect class="boundary" x="300" y="315" width="510" height="295" rx="12" stroke="#34d399"/>
+        <text class="tiny" x="320" y="339" fill="#34d399">PYTHON DOMAIN LAYER</text>
+        <rect class="boundary" x="850" y="70" width="400" height="190" rx="12" stroke="#fbbf24"/>
+        <text class="tiny" x="870" y="94" fill="#fbbf24">EXTERNAL DATA SERVICE</text>
+
+        <!-- Components -->
+        <g><rect class="box" x="50" y="135" width="210" height="90" rx="8" stroke="#22d3ee"/><text class="label" x="70" y="168">Ticker_symbols.xlsx</text><text class="small" x="70" y="190">194 HEL instruments</text><text class="tiny" x="70" y="208">Symbol + market metadata</text></g>
+        <g><rect class="box" x="330" y="135" width="190" height="90" rx="8" stroke="#22d3ee"/><text class="label" x="350" y="168">fin_stock_analysis</text><text class="small" x="350" y="190">Jupyter interface</text><text class="tiny" x="350" y="208">configure → run → filter</text></g>
+        <g><rect class="box" x="590" y="135" width="190" height="90" rx="8" stroke="#22d3ee"/><text class="label" x="610" y="168">AnalysisConfig</text><text class="small" x="610" y="190">analysis_year = Y-1</text><text class="tiny" x="610" y="208">comparison_year = Y</text></g>
+        <g><rect class="box" x="870" y="135" width="200" height="90" rx="8" stroke="#fbbf24"/><text class="label" x="890" y="168">Yahoo Finance</text><text class="small" x="890" y="190">prices + statements</text><text class="tiny" x="890" y="208">yfinance API</text></g>
+        <g><rect class="box" x="1140" y="135" width="90" height="90" rx="8" stroke="#fbbf24"/><text class="label" x="1155" y="168">API</text><text class="small" x="1155" y="190">HTTP</text></g>
+
+        <g><rect class="box" x="330" y="365" width="220" height="95" rx="8" stroke="#34d399"/><text class="label" x="350" y="398">tickers.py</text><text class="small" x="350" y="420">validate + normalise</text><text class="tiny" x="350" y="441">NDA FI → NDA-FI.HE</text></g>
+        <g><rect class="box" x="590" y="365" width="220" height="95" rx="8" stroke="#34d399"/><text class="label" x="610" y="398">pipeline.py</text><text class="small" x="610" y="420">parallel orchestration</text><text class="tiny" x="610" y="441">one row per ticker</text></g>
+        <g><rect class="box" x="330" y="475" width="220" height="95" rx="8" stroke="#a78bfa"/><text class="label" x="350" y="508">metrics.py</text><text class="small" x="350" y="530">financial metrics</text><text class="tiny" x="350" y="550">P/E · P/B · ROE · D/E</text></g>
+        <g><rect class="box" x="590" y="475" width="220" height="95" rx="8" stroke="#34d399"/><text class="label" x="610" y="508">row-level resilience</text><text class="small" x="610" y="530">status + error columns</text><text class="tiny" x="610" y="550">missing values preserved</text></g>
+        <g><rect class="box" x="850" y="475" width="260" height="95" rx="8" stroke="#a78bfa"/><text class="label" x="870" y="508">stock_analysis_dataset.xlsx</text><text class="small" x="870" y="530">Dataset + Run_metadata</text><text class="tiny" x="870" y="550">single final export</text></g>
+        <g><rect class="box" x="330" y="630" width="220" height="55" rx="8" stroke="#fb7185"/><text class="label" x="350" y="663">tests/test_core.py</text></g>
+        <g><rect class="box" x="590" y="630" width="220" height="55" rx="8" stroke="#fb7185"/><text class="label" x="610" y="663">unittest + compileall</text></g>
+
+        <text class="tiny" x="35" y="285">INPUT</text><text class="tiny" x="330" y="285">CONTROL</text><text class="tiny" x="590" y="285">DOMAIN LOGIC</text><text class="tiny" x="870" y="285">EXTERNAL</text><text class="tiny" x="850" y="610">OUTPUT</text>
+      </svg>
+    </section>
+
+    <section class="cards">
+      <div class="card"><h2><span class="dot cyan"></span>Execution flow</h2><p>1. Load and validate ticker universe</p><p>2. Fetch independent instruments concurrently</p><p>3. Calculate metrics using configured years</p></div>
+      <div class="card"><h2><span class="dot green"></span>Dataset contract</h2><p>One row per input ticker</p><p>Stable schema for filtering</p><p>Failures remain visible as status/error</p></div>
+      <div class="card"><h2><span class="dot violet"></span>Comparison logic</h2><p>analysis_year = current year − 1</p><p>comparison_year = current year</p><p>price_change_pct uses comparison close as baseline</p></div>
+    </section>
+    <footer>architecture.html · self-contained SVG · stock-analysis project</footer>
+  </main>
+</body>
+</html>
