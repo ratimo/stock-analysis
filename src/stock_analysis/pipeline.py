@@ -1,3 +1,5 @@
+"""Orchestration for downloading, combining and exporting the dataset."""
+
 from __future__ import annotations
 
 import logging
@@ -17,6 +19,9 @@ LOGGER = logging.getLogger(__name__)
 
 
 def _last_close(ticker: Any, year: int) -> float | None:
+    """Return the last available unadjusted close in a calendar year."""
+    # The end date is exclusive in yfinance, so use 1 January of the next year
+    # to include the final trading day of the requested year.
     history = ticker.history(start=f"{year}-01-01", end=f"{year + 1}-01-01", auto_adjust=False)
     if history.empty or "Close" not in history:
         return None
@@ -24,8 +29,11 @@ def _last_close(ticker: Any, year: int) -> float | None:
 
 
 def _analyse_one(row: dict[str, Any], config: AnalysisConfig) -> dict[str, Any]:
+    """Analyse one input row while keeping failures local to that row."""
     symbol = row["Symbol"]
     yahoo_ticker = row["YahooTicker"]
+    # Initialise identifiers and run metadata before any network call. If the
+    # request fails, the output still contains a traceable row for this ticker.
     result: dict[str, Any] = {
         "symbol": symbol,
         "yahoo_ticker": yahoo_ticker,
@@ -37,10 +45,12 @@ def _analyse_one(row: dict[str, Any], config: AnalysisConfig) -> dict[str, Any]:
         "error": None,
     }
     try:
+        # One Ticker object is reused for all statements and dividends.
         ticker = yf.Ticker(yahoo_ticker)
         analysis_price = _last_close(ticker, config.analysis_year)
         comparison_price = _last_close(ticker, config.comparison_year)
         result.update(calculate_metrics(ticker, config.analysis_year, analysis_price))
+        # The percentage change uses comparison-year close as its baseline.
         result.update({
             "analysis_year_last_close": analysis_price,
             "comparison_year_last_close": comparison_price,
@@ -49,7 +59,9 @@ def _analyse_one(row: dict[str, Any], config: AnalysisConfig) -> dict[str, Any]:
                 comparison_price,
             ),
         })
-    except Exception as exc:  # one bad instrument must not discard the dataset
+    except Exception as exc:
+        # A single delisted or incomplete instrument must not discard the
+        # otherwise usable rows. The error is retained for later filtering.
         result["status"] = "error"
         result["error"] = f"{type(exc).__name__}: {exc}"
         LOGGER.warning("Failed to analyse %s: %s", yahoo_ticker, exc)
@@ -57,10 +69,17 @@ def _analyse_one(row: dict[str, Any], config: AnalysisConfig) -> dict[str, Any]:
 
 
 def run_analysis(config: AnalysisConfig) -> pd.DataFrame:
-    """Fetch the complete universe and return one row per input ticker."""
+    """Fetch the complete universe and return one sorted row per ticker.
+
+    Requests are independent, so a bounded thread pool reduces runtime. The
+    final column list is explicit: even when every value for a metric is
+    missing, the dataset retains a stable schema for downstream filtering.
+    """
     tickers = load_tickers(config.ticker_file)
     rows = tickers.to_dict("records")
     results: list[dict[str, Any]] = []
+    # Completion order is nondeterministic; sorting below restores stable
+    # output order for reproducible comparisons and Excel filters.
     with ThreadPoolExecutor(max_workers=config.max_workers) as executor:
         futures = [executor.submit(_analyse_one, row, config) for row in rows]
         for future in as_completed(futures):
@@ -76,7 +95,11 @@ def run_analysis(config: AnalysisConfig) -> pd.DataFrame:
 
 
 def save_dataset(dataset: pd.DataFrame, config: AnalysisConfig) -> Path:
-    """Save the final dataset once, with a small reproducibility sheet."""
+    """Save the final dataset once, with reproducibility metadata.
+
+    The metadata sheet records the years and success count used for the file,
+    which makes later comparisons possible without relying on notebook state.
+    """
     output = Path(config.output_file)
     metadata = pd.DataFrame([{
         "created_at_utc": datetime.now(timezone.utc).isoformat(),

@@ -34,7 +34,7 @@ PYTHONPATH=src python - <<'PY'
 from stock_analysis.config import AnalysisConfig
 from stock_analysis.pipeline import run_analysis, save_dataset
 
-config = AnalysisConfig(analysis_year=2022, comparison_year=2023, max_workers=4)
+config = AnalysisConfig(max_workers=4)
 dataset = run_analysis(config)
 save_dataset(dataset, config)
 print(dataset.shape)
